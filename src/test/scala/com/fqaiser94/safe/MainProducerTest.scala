@@ -19,27 +19,34 @@ object MainProducerTest extends DefaultRunnableSpec {
   private val tests = Seq(
     testM("writes a message to kafka every second") {
       for {
-        producerFiber <- MainProducer.program.fork
+        _ <- TestClock.adjust(0.seconds)
+        _ <- MainProducer.program.fork
 
         bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
         settings = ConsumerSettings(bootstrapServers)
           .withGroupId("test-consumer")
           .withOffsetRetrieval(OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest))
         consumer = Consumer.make(settings)
+
         msg1Fiber <- consumer.use(_
           .subscribeAnd(Subscription.topics("items"))
           .plainStream(Serde.string, Serde.string)
           .take(1)
           .map(x => (x.key, x.value))
           .runCollect).fork
-        _ <- putStrLn("get this far?")
-        //_ <- TestClock.adjust(2.seconds)
-        //
         _ <- TestClock.adjust(1.seconds)
-        _ <- producerFiber.interrupt
-        msg <- msg1Fiber.await
-        _ <- putStrLn(msg.toString)
-       } yield assert(msg)(equalTo(Success(Chunk((null, "0")))))
+        msg1 <- msg1Fiber.join
+
+        msg2Fiber <- consumer.use(_
+          .subscribeAnd(Subscription.topics("items"))
+          .plainStream(Serde.string, Serde.string)
+          .take(2)
+          .map(x => (x.key, x.value))
+          .runCollect).fork
+        _ <- TestClock.adjust(1.seconds)
+        msg2 <- msg2Fiber.join
+
+       } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1000"))))
     }.provideCustomLayer(TestClock.default ++ Kafka.test ++ testConsumerProducerLayer) @@ timeout(60.seconds)
   )
 
