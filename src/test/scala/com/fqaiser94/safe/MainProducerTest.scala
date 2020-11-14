@@ -1,7 +1,8 @@
 package com.fqaiser94.safe
 
 import com.fqaiser94.safe.Utils.{testConsumerProducerLayer, testProducerLayer}
-import zio.ZIO
+import zio.Exit.Success
+import zio.{Chunk, ZIO}
 import zio.blocking.Blocking
 import zio.console.putStrLn
 import zio.duration.durationInt
@@ -38,8 +39,7 @@ object MainProducerTest extends DefaultRunnableSpec {
         _ <- producerFiber.interrupt
         msg <- msg1Fiber.await
         _ <- putStrLn(msg.toString)
-      // } yield assert(msg1)(equalTo(Some((null, "1000"))))
-      } yield assert(1)(equalTo(1))
+       } yield assert(msg)(equalTo(Success(Chunk((null, "0")))))
     }.provideCustomLayer(TestClock.default ++ Kafka.test ++ testConsumerProducerLayer) @@ timeout(60.seconds)
   )
 
