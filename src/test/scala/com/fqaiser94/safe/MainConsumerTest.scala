@@ -17,15 +17,15 @@ object MainConsumerTest extends DefaultRunnableSpec {
     testM("Consumes all messages from kafka topic and prints them to console") {
       val expected = Seq("key1:value1", "key2:value2")
       for {
-        bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
-        programFiber <- MainConsumer.program(bootstrapServers).fork
+        programFiber <- MainConsumer.program.fork
         _ <- Producer.produce[Any, String, String](new ProducerRecord[String, String]("items", "key1", "value1"))
         _ <- TestClock.adjust(1.seconds)
-        _ <- Producer.produce[Any, String, String](new ProducerRecord[String, String]("items", "key1", "value1"))
+        // output1 <- TestConsole.output
+        _ <- Producer.produce[Any, String, String](new ProducerRecord[String, String]("items", "key2", "value2"))
         _ <- TestClock.adjust(2.seconds)
-        output <- TestConsole.output
+        output2 <- TestConsole.output
         _ <- programFiber.interrupt
-      } yield assert(output.toSeq)(equalTo(expected))
+      } yield assert(output2)(equalTo(expected))
     }.provideCustomLayer(TestConsole.silent ++ Kafka.test ++ testConsumerProducerLayer) @@ timeout(60.seconds)
   )
 
