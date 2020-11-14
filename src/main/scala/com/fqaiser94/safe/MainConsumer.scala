@@ -1,6 +1,8 @@
 package com.fqaiser94.safe
 
-import zio.console.putStr
+import zio.blocking.Blocking
+import zio.clock.Clock
+import zio.console.{Console, putStr}
 import zio.duration.durationInt
 import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
 import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
@@ -11,8 +13,8 @@ import zio.{Schedule, ZIO}
 /**
  * Continuously consumes messages from items topic in kafka and prints it to stdout
  */
-object MainConsumer { // extends zio.App {
-  val program =
+object MainConsumer extends zio.App {
+  val program: ZIO[Any with Kafka with Console with Blocking with Clock, Nothing, Unit] =
     ZStream
       .repeatEffectWith(
         effect = for {
@@ -26,14 +28,10 @@ object MainConsumer { // extends zio.App {
         } yield (),
         schedule = Schedule.spaced(1.seconds))
       .run(ZSink.drain)
+      .orDie
 
-  //  override def run(args: List[String]) = {
-  //    val bootstrapServers = List(args.headOption.getOrElse("kafka:9092"))
-  //    val consumerSettings = ConsumerSettings(bootstrapServers)
-  //    val consumerLayer = Consumer.make(consumerSettings).toLayer
-  //
-  //    program
-  //      .provideSomeLayer(Clock.live ++ Blocking.live ++ Console.live ++ consumerLayer)
-  //      .exitCode
-  //  }
+  override def run(args: List[String]) =
+    program
+      .provideSomeLayer(Kafka.live ++ Console.live ++ Blocking.live ++ Clock.live)
+      .exitCode
 }
