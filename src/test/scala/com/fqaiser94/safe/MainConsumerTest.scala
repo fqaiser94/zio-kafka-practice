@@ -2,8 +2,6 @@ package com.fqaiser94.safe
 
 import com.fqaiser94.safe.Utils.testConsumerProducerLayer
 import org.apache.kafka.clients.producer.ProducerRecord
-import zio.ZIO
-import zio.blocking.Blocking
 import zio.duration.durationInt
 import zio.kafka.producer.Producer
 import zio.test.Assertion.equalTo
@@ -14,7 +12,7 @@ import zio.test.environment.{TestClock, TestConsole, TestEnvironment}
 object MainConsumerTest extends DefaultRunnableSpec {
 
   private val tests = Seq(
-    testM("Consumes all messages from kafka topic and prints them to console") {
+    testM("Should consume and print out messages from items topic in Kafka every second") {
       for {
         programFiber <- MainConsumer.program.fork
         _ <- Producer.produce[Any, String, String](new ProducerRecord[String, String]("items", "key1", "value1"))
