@@ -11,7 +11,7 @@ import zio.stream.{ZSink, ZStream}
 import zio.{Schedule, ZIO}
 
 /**
- * Continuously consumes messages from items topic in kafka and prints it to stdout
+ * Consumes messages from items topic and prints them out to stdout every second
  */
 object MainConsumer extends zio.App {
   val program: ZIO[Any with Kafka with Console with Blocking with Clock, Nothing, Unit] =

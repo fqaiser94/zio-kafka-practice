@@ -10,7 +10,7 @@ import zio.stream.{ZSink, ZStream}
 import zio.{Schedule, ZIO}
 
 /**
- * Continuously produces a message to items topic in kafka every second
+ * Produces a message to items topic every second
  */
 object MainProducer extends zio.App {
   val program: ZIO[Any with Blocking with Producer[Any, String, String] with Clock, Throwable, Unit] =
