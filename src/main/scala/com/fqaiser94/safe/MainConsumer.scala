@@ -20,7 +20,7 @@ object MainConsumer extends zio.App {
         effect = for {
           bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
           settings = ConsumerSettings(bootstrapServers)
-            .withGroupId("test-consumer")
+            .withGroupId("consumer")
             .withOffsetRetrieval(OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest))
           _ <- Consumer.consumeWith(settings, Subscription.topics("items"), Serde.string, Serde.string) {
             (k, v) => putStr(s"$k:$v")

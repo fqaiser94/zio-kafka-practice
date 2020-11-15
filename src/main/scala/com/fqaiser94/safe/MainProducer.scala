@@ -22,7 +22,7 @@ object MainProducer extends zio.App {
           bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
           producerSettings = ProducerSettings(bootstrapServers)
           producerManaged = Producer.make[Any, String, String](producerSettings, Serde.string, Serde.string)
-          record = new ProducerRecord("items", null.asInstanceOf[String], time.toInstant.toEpochMilli.toString)
+          record = new ProducerRecord("items", null.asInstanceOf[String], time.toEpochSecond.toString)
           _ <- putStrLn(record.toString)
           r <- producerManaged.use(_.produce(record))
           _ <- putStrLn(s"Produced to offset: ${r.offset().toString}")

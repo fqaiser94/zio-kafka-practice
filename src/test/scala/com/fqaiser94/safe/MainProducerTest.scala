@@ -16,7 +16,7 @@ object MainProducerTest extends DefaultRunnableSpec {
   private val tests = Seq(
     testM("writes a message to kafka every second") {
       for {
-        _ <- TestClock.adjust(0.seconds)
+        _ <- TestClock.setTime(0.seconds)
         _ <- MainProducer.program.fork
 
         bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
@@ -31,7 +31,7 @@ object MainProducerTest extends DefaultRunnableSpec {
           .take(1)
           .map(x => (x.key, x.value))
           .runCollect).fork
-        _ <- TestClock.adjust(1.seconds)
+        _ <- TestClock.setTime(1.seconds)
         msg1 <- msg1Fiber.join
 
         msg2Fiber <- consumer.use(_
@@ -40,10 +40,10 @@ object MainProducerTest extends DefaultRunnableSpec {
           .take(2)
           .map(x => (x.key, x.value))
           .runCollect).fork
-        _ <- TestClock.adjust(1.seconds)
+        _ <- TestClock.setTime(2.seconds)
         msg2 <- msg2Fiber.join
 
-      } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1000"))))
+      } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1"))))
     }.provideSomeLayer(Kafka.test ++ Blocking.live ++ TestClock.default ++ TestConsole.silent) @@ timeout(60.seconds)
   )
 
