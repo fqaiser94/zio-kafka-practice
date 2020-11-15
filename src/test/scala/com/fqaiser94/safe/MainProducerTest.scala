@@ -1,6 +1,7 @@
 package com.fqaiser94.safe
 
 import zio.blocking.Blocking
+import zio.clock.Clock
 import zio.duration.{Duration, durationInt}
 import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
 import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
@@ -32,14 +33,12 @@ object MainProducerTest extends DefaultRunnableSpec {
         settings = ConsumerSettings(bootstrapServers)
           .withGroupId("test-consumer")
           .withOffsetRetrieval(OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest))
-        msg1Fiber <- Consumer.make(settings).use(_
+        msg1 <- Consumer.make(settings).use(_
           .subscribeAnd(Subscription.topics("items"))
           .plainStream(Serde.string, Serde.string)
           .take(1)
           .map(x => (x.key, x.value))
-          .runCollect).fork
-        _ <- speedUpTime(1.second, 1.second)
-        msg1 <- msg1Fiber.join
+          .runCollect).provideSomeLayer(Clock.live ++ Blocking.live)
 
       } yield assert(msg1)(equalTo(Chunk((null, "0"))))
     }.provideSomeLayer(Kafka.test ++ Blocking.live ++ TestClock.default) @@ timeout(60.seconds)
