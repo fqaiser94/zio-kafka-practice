@@ -11,13 +11,13 @@ import zio.test.TestAspect.timeout
 import zio.test._
 import zio.test.environment.{TestClock, TestConsole, TestEnvironment}
 
-object MainConsumerTest extends DefaultRunnableSpec {
+object MainScheduledConsumerTest extends DefaultRunnableSpec {
 
   private val tests = Seq(
     testM("Should consume and print out messages from items topic in Kafka") {
       for {
         _ <- TestClock.setTime(0.seconds)
-        _ <- MainConsumer.program.fork
+        _ <- MainScheduledConsumer.program.fork
 
         bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
         producerSettings = ProducerSettings(bootstrapServers)
@@ -32,7 +32,7 @@ object MainConsumerTest extends DefaultRunnableSpec {
     testM("Should consume and print out messages from items topic in Kafka every second") {
       for {
         _ <- TestClock.setTime(0.seconds)
-        _ <- MainConsumer.program.fork
+        _ <- MainScheduledConsumer.program.fork
 
         bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
         producerSettings = ProducerSettings(bootstrapServers)

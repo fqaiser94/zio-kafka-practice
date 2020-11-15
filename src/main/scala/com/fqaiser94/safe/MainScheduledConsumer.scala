@@ -13,7 +13,7 @@ import zio.{Schedule, ZIO}
 /**
  * Consumes messages from items topic and prints them out to stdout every second
  */
-object MainConsumer extends zio.App {
+object MainScheduledConsumer extends zio.App {
   val program: ZIO[Any with Kafka with Console with Blocking with Clock, Nothing, Unit] =
     ZStream
       .repeatEffectWith(

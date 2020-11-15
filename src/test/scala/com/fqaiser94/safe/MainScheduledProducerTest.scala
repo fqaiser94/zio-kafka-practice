@@ -11,13 +11,13 @@ import zio.test._
 import zio.test.environment.{TestClock, TestConsole, TestEnvironment}
 import zio.{Chunk, ZIO}
 
-object MainProducerTest extends DefaultRunnableSpec {
+object MainScheduledProducerTest extends DefaultRunnableSpec {
 
   private val tests = Seq(
     testM("writes a message to kafka every second") {
       for {
         _ <- TestClock.setTime(0.seconds)
-        _ <- MainProducer.program.fork
+        _ <- MainScheduledProducer.program.fork
 
         bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
         settings = ConsumerSettings(bootstrapServers)

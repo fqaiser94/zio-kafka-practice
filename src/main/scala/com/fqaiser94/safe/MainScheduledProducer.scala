@@ -13,7 +13,7 @@ import zio.{Schedule, ZIO}
 /**
  * Produces a message to items topic every second
  */
-object MainProducer extends zio.App {
+object MainScheduledProducer extends zio.App {
   val program: ZIO[Any with Blocking with Clock with Console with Kafka, Throwable, Unit] =
     ZStream
       .repeatEffectWith(
