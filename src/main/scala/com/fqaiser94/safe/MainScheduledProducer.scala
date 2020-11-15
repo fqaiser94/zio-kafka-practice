@@ -14,7 +14,7 @@ import zio.{Schedule, ZIO}
  * Produces a message to items topic every second
  */
 object MainScheduledProducer extends zio.App {
-  val program: ZIO[Any with Blocking with Clock with Console with Kafka, Throwable, Unit] =
+  val program: ZIO[Any with Blocking with Clock with Kafka, Throwable, Unit] =
     ZStream
       .repeatEffectWith(
         effect = for {
@@ -23,9 +23,7 @@ object MainScheduledProducer extends zio.App {
           producerSettings = ProducerSettings(bootstrapServers)
           producerManaged = Producer.make[Any, String, String](producerSettings, Serde.string, Serde.string)
           record = new ProducerRecord("items", null.asInstanceOf[String], time.toEpochSecond.toString)
-          _ <- putStrLn(record.toString)
           r <- producerManaged.use(_.produce(record))
-          _ <- putStrLn(s"Produced to offset: ${r.offset().toString}")
         } yield (),
         schedule = Schedule.spaced(1.seconds))
       .runDrain
