@@ -14,15 +14,6 @@ import zio.{Chunk, Fiber, Schedule, URIO, ZIO}
 
 object MainProducerTest extends DefaultRunnableSpec {
 
-  /**
-   * Continuously advances TestClock time by testInterval every liveInterval
-   */
-  def speedUpTime(testIntervals: Duration, liveIntervals: Duration): URIO[TestClock with Live, Fiber.Runtime[Nothing, Long]] = {
-    val adjustTestClock = TestClock.adjust(Duration.fromJava(testIntervals))
-    val liveRepeatSchedule = Schedule.spaced(Duration.fromJava(liveIntervals))
-    Live.withLive(adjustTestClock)(_.repeat(liveRepeatSchedule)).fork
-  }
-
   private val tests = Seq(
     testM("writes a message to kafka") {
       for {
