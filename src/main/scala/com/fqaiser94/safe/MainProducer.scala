@@ -14,26 +14,24 @@ import zio.{Schedule, ZIO}
  * Produces a message to items topic every second
  */
 object MainProducer extends zio.App {
-  val program: ZIO[Any with Blocking with Producer[Any, String, String] with Clock with Console, Throwable, Unit] =
+  val program: ZIO[Any with Blocking with Clock with Console with Kafka, Throwable, Unit] =
     ZStream
       .repeatEffectWith(
         effect = for {
           time <- ZIO.accessM[Clock](_.get.currentDateTime).orDie
+          bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
+          producerSettings = ProducerSettings(bootstrapServers)
+          producerManaged = Producer.make[Any, String, String](producerSettings, Serde.string, Serde.string)
           record = new ProducerRecord("items", null.asInstanceOf[String], time.toInstant.toEpochMilli.toString)
           _ <- putStrLn(record.toString)
-          r <- Producer.produce[Any, String, String](record)
+          r <- producerManaged.use(_.produce(record))
           _ <- putStrLn(s"Produced to offset: ${r.offset().toString}")
         } yield (),
         schedule = Schedule.spaced(1.seconds))
       .runDrain
 
-  override def run(args: List[String]) = {
-    val bootstrapServers = List(args.headOption.getOrElse("kafka:9092"))
-    val producerSettings = ProducerSettings(bootstrapServers)
-    val producerLayer = Producer.make[Any, String, String](producerSettings, Serde.string, Serde.string).toLayer
-
+  override def run(args: List[String]) =
     program
-      .provideSomeLayer(producerLayer ++ Blocking.live ++ Clock.live ++ Console.live)
+      .provideSomeLayer(Kafka.live ++ Blocking.live ++ Clock.live ++ Console.live)
       .exitCode
-  }
 }

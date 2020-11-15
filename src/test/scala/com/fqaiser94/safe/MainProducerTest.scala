@@ -1,10 +1,6 @@
 package com.fqaiser94.safe
 
-import com.fqaiser94.safe.Utils.{testConsumerProducerLayer, testProducerLayer}
-import zio.Exit.Success
-import zio.{Chunk, ZIO}
 import zio.blocking.Blocking
-import zio.console.putStrLn
 import zio.duration.durationInt
 import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
 import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
@@ -12,7 +8,8 @@ import zio.kafka.serde.Serde
 import zio.test.Assertion.equalTo
 import zio.test.TestAspect.timeout
 import zio.test._
-import zio.test.environment.{TestClock, TestEnvironment}
+import zio.test.environment.{TestClock, TestConsole, TestEnvironment}
+import zio.{Chunk, ZIO}
 
 object MainProducerTest extends DefaultRunnableSpec {
 
@@ -46,8 +43,8 @@ object MainProducerTest extends DefaultRunnableSpec {
         _ <- TestClock.adjust(1.seconds)
         msg2 <- msg2Fiber.join
 
-       } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1000"))))
-    }.provideCustomLayer(TestClock.default ++ Kafka.test ++ testConsumerProducerLayer) @@ timeout(60.seconds)
+      } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1000"))))
+    }.provideSomeLayer(Kafka.test ++ Blocking.live ++ TestClock.default ++ TestConsole.silent) @@ timeout(60.seconds)
   )
 
   override def spec: Spec[TestEnvironment, TestFailure[Throwable], TestSuccess] =
