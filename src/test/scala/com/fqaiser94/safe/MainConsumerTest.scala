@@ -22,7 +22,7 @@ object MainConsumerTest extends DefaultRunnableSpec {
         producerManaged = Producer.make[Any, String, String](producerSettings, Serde.string, Serde.string)
         _ <- producerManaged.use(_.produce(new ProducerRecord[String, String]("items", "key1", "value1")))
 
-        _ <- MainConsumer.program.take(1).runDrain
+        _ <- MainConsumer.program.takeUntilM(_ => TestConsole.output.map(_.nonEmpty)).runDrain
         output1 <- TestConsole.output
       } yield assert(output1)(equalTo(Seq("key1:value1")))
     }.provideSomeLayer(Kafka.test ++ TestConsole.silent ++ Blocking.live ++ Clock.live) @@ timeout(60.seconds)
