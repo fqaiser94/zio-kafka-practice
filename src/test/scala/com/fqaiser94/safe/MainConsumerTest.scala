@@ -1,17 +1,15 @@
 package com.fqaiser94.safe
 
+import com.fqaiser94.safe.Utils._
 import org.apache.kafka.clients.producer.ProducerRecord
-import zio.{Chunk, ZIO}
+import zio.Chunk
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.duration.durationInt
-import zio.kafka.producer.{Producer, ProducerSettings}
-import zio.kafka.serde.Serde
 import zio.test.Assertion.equalTo
 import zio.test.TestAspect.timeout
 import zio.test._
 import zio.test.environment.{TestConsole, TestEnvironment}
-import Utils._
 
 object MainConsumerTest extends DefaultRunnableSpec {
 
