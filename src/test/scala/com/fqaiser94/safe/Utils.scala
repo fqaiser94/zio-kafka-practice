@@ -1,6 +1,12 @@
 package com.fqaiser94.safe
 
+import java.lang
+import java.util.Properties
+
+import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
@@ -8,6 +14,8 @@ import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
 import zio.kafka.producer.{Producer, ProducerSettings}
 import zio.kafka.serde.Serde
 import zio.{Chunk, ZIO}
+
+import scala.jdk.CollectionConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 
 object Utils {
 
@@ -27,6 +35,25 @@ object Utils {
         .map(x => (x.key, x.value))
         .runCollect).provideSomeLayer(Clock.live ++ Blocking.live)
     } yield messages
+
+  def getOffset(brokerList: String, topic: String): Map[TopicPartition, Long] = {
+    val clientId = "GetOffsetShell"
+    val config = new Properties
+    config.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList)
+    config.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, clientId)
+    val consumer = new KafkaConsumer(config, new ByteArrayDeserializer, new ByteArrayDeserializer)
+    val partitionInfos = consumer.listTopics.asScala.filter { case (k, _) => k == topic }.values.flatMap(_.asScala).toSeq
+    val topicPartitions = partitionInfos.sortBy(_.partition).flatMap {
+      case p if p.leader == null => None
+      case p => Some(new TopicPartition(p.topic, p.partition))
+    }
+
+    consumer
+      .endOffsets(topicPartitions.asJava)
+      .asScala
+      .map(x => (x._1, x._2.asInstanceOf[Long]))
+      .toMap
+  }
 
   /**
    * Blocks until messages have been produced to Kafka
