@@ -1,6 +1,6 @@
 package com.fqaiser94.safe
 
-import com.fqaiser94.safe.Utils.consumeMessagesFromKafka
+import com.fqaiser94.safe.Utils.{consumeAllMessagesFromKafka, consumeMessagesFromKafka}
 import zio.Chunk
 import zio.blocking.Blocking
 import zio.duration.durationInt
@@ -13,11 +13,13 @@ object MainProducerTest extends DefaultRunnableSpec {
 
   private val tests = Seq(
     testM("writes a message to kafka") {
+      val expectedMsg = Chunk((null, "0"))
       for {
         _ <- TestClock.setTime(0.second)
         _ <- MainProducer.program
-        msg1 <- consumeMessagesFromKafka(1, "items")
-      } yield assert(msg1)(equalTo(Chunk((null, "0"))))
+        msg <- consumeMessagesFromKafka(1, "items")
+        allMsgs <- consumeAllMessagesFromKafka("items")
+      } yield assert(msg)(equalTo(expectedMsg)) && assert(allMsgs)(equalTo(expectedMsg))
     }.provideSomeLayer(Kafka.test ++ Blocking.live ++ TestClock.default) @@ timeout(60.seconds)
   )
 

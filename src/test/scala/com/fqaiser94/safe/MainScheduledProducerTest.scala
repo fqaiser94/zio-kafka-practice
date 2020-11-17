@@ -1,13 +1,13 @@
 package com.fqaiser94.safe
 
-import com.fqaiser94.safe.Utils.consumeMessagesFromKafka
+import com.fqaiser94.safe.Utils.{consumeAllMessagesFromKafka, consumeMessagesFromKafka}
 import zio.Chunk
 import zio.blocking.Blocking
 import zio.duration.durationInt
 import zio.test.Assertion.equalTo
 import zio.test.TestAspect.timeout
 import zio.test._
-import zio.test.environment.{TestClock, TestEnvironment}
+import zio.test.environment.{TestClock, TestConsole, TestEnvironment}
 
 object MainScheduledProducerTest extends DefaultRunnableSpec {
 
@@ -18,8 +18,7 @@ object MainScheduledProducerTest extends DefaultRunnableSpec {
         _ <- MainScheduledProducer.program.fork
         msg1 <- consumeMessagesFromKafka(1, "items")
         _ <- TestClock.adjust(1.seconds)
-        // TODO: write a consumeAllMessagesFromKafka method
-        msg2 <- consumeMessagesFromKafka(2, "items")
+        msg2 <- consumeAllMessagesFromKafka("items")
       } yield assert(msg1)(equalTo(Chunk((null, "0")))) && assert(msg2)(equalTo(Chunk((null, "0"), (null, "1"))))
     }.provideSomeLayer(Kafka.test ++ Blocking.live ++ TestClock.default) @@ timeout(60.seconds)
   )

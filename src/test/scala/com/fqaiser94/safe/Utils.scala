@@ -1,6 +1,5 @@
 package com.fqaiser94.safe
 
-import java.lang
 import java.util.Properties
 
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
@@ -13,7 +12,7 @@ import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
 import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
 import zio.kafka.producer.{Producer, ProducerSettings}
 import zio.kafka.serde.Serde
-import zio.{Chunk, ZIO}
+import zio.{Chunk, Ref, ZIO}
 
 import scala.jdk.CollectionConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 
@@ -36,7 +35,7 @@ object Utils {
         .runCollect).provideSomeLayer(Clock.live ++ Blocking.live)
     } yield messages
 
-  def getOffset(brokerList: String, topic: String): Map[TopicPartition, Long] = {
+  def latestOffset(brokerList: String, topic: String): Map[Int, Long] = {
     val clientId = "GetOffsetShell"
     val config = new Properties
     config.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList)
@@ -51,9 +50,31 @@ object Utils {
     consumer
       .endOffsets(topicPartitions.asJava)
       .asScala
-      .map(x => (x._1, x._2.asInstanceOf[Long]))
+      .map { case (topicPartition, endOffset) => (topicPartition.partition(), endOffset.asInstanceOf[Long]) }
       .toMap
   }
+
+  /**
+   * Blocks until numMessages have been consumed
+   */
+  val consumeAllMessagesFromKafka: String => ZIO[Kafka, Throwable, Chunk[(String, String)]] =
+    (topic: String) => for {
+      bootstrapServers <- ZIO.access[Kafka](_.get.bootstrapServers)
+      settings = ConsumerSettings(bootstrapServers)
+        .withGroupId("test-consumer")
+        .withOffsetRetrieval(OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest))
+      consumedOffsets <- Ref.make(Map.empty[Int, Long])
+      latestOffsets = latestOffset(bootstrapServers.mkString(","), topic)
+      messages <- Consumer.make(settings).use(_
+        .subscribeAnd(Subscription.topics(topic))
+        .plainStream(Serde.string, Serde.string)
+        .takeUntilM(cr => for {
+          // don't understand why the last message has an offset that is 1 less than the latest offset
+          offsets <- consumedOffsets.updateAndGet(map => map ++ Map(cr.partition -> (cr.offset.offset + 1)))
+        } yield offsets == latestOffsets)
+        .map(x => (x.key, x.value))
+        .runCollect).provideSomeLayer[Kafka](Clock.live ++ Blocking.live)
+    } yield messages
 
   /**
    * Blocks until messages have been produced to Kafka
