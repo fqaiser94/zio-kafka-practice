@@ -13,10 +13,10 @@ import zio.test._
 import zio.test.environment.{TestConsole, TestEnvironment}
 import zio.{Chunk, ZIO}
 
-object LatestOffsetTest extends DefaultRunnableSpec {
+object UtilsTest extends DefaultRunnableSpec {
 
   private val tests = Seq(
-    testM("latestOffset should return map of offsets from topic") {
+    testM("latestOffset should return map of offsets for single-partition topic") {
       for {
         _ <- produceMessagesToKafka(Chunk(
           new ProducerRecord[String, String]("items", "key1", "value1"),
@@ -26,7 +26,20 @@ object LatestOffsetTest extends DefaultRunnableSpec {
         offsetMap = Utils.latestOffset(brokerList, "items")
       } yield assert(offsetMap)(equalTo(Map(0 -> 2L)))
     } @@ timeout(60.seconds),
-    testM("consumeAllMessagesFromKafka should consume all message from kafka") {
+    testM("latestOffset should return map of offsets for multi-partition topic") {
+      for {
+        brokerList <- ZIO.access[Kafka](_.get.bootstrapServers)
+        _ <- AdminClient.make(AdminClientSettings(brokerList)).use(client => client.createTopic(NewTopic("items", 2, 1)))
+        _ <- produceMessagesToKafka(Chunk(
+          new ProducerRecord[String, String]("items", 0, "key1", "value1"),
+          new ProducerRecord[String, String]("items", 1, "key2", "value2"),
+          new ProducerRecord[String, String]("items", 1, "key3", "value3")))
+
+        brokerList <- ZIO.access[Kafka](_.get.bootstrapServers.mkString(","))
+        offsetMap = Utils.latestOffset(brokerList, "items")
+      } yield assert(offsetMap)(equalTo(Map(0 -> 1L, 1 -> 2L)))
+    } @@ timeout(60.seconds),
+    testM("consumeAllMessagesFromKafka should consume all messages from singe-partitioned topic") {
       for {
         _ <- produceMessagesToKafka(Chunk(
           new ProducerRecord[String, String]("items", "key1", "value1"),
@@ -36,7 +49,7 @@ object LatestOffsetTest extends DefaultRunnableSpec {
         messages <- consumeAllMessagesFromKafka("items")
       } yield assert(messages)(equalTo(Seq(("key1", "value1"), ("key2", "value2"), ("key3", "value3"))))
     } @@ timeout(60.seconds),
-    testM("consumeAllMessagesFromKafka should consume all message from kafka across multiple partitions") {
+    testM("consumeAllMessagesFromKafka should consume all message from multi-partitioned topic") {
       for {
         brokerList <- ZIO.access[Kafka](_.get.bootstrapServers)
         _ <- AdminClient.make(AdminClientSettings(brokerList)).use(client => client.createTopic(NewTopic("items", 2, 1)))

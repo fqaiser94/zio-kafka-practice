@@ -19,7 +19,8 @@ import scala.jdk.CollectionConverters.{iterableAsScalaIterableConverter, mapAsSc
 object Utils {
 
   /**
-   * Blocks until numMessages have been consumed
+   * Returns numMessages from the beginning of the given topic.
+   * Note that this will block until numMessages exist in topic.
    */
   val consumeMessagesFromKafka: (Int, String) => ZIO[Kafka, Throwable, Chunk[(String, String)]] =
     (numMessages: Int, topic: String) => for {
@@ -35,6 +36,9 @@ object Utils {
         .runCollect).provideSomeLayer(Clock.live ++ Blocking.live)
     } yield messages
 
+  /**
+   * Returns a map of Partition -> LatestOffset for a given topic.
+   */
   def latestOffset(brokerList: String, topic: String): Map[Int, Long] = {
     val clientId = "GetOffsetShell"
     val config = new Properties
@@ -55,7 +59,7 @@ object Utils {
   }
 
   /**
-   * Blocks until numMessages have been consumed
+   * Returns all messages from the beginning of the given topic.
    */
   val consumeAllMessagesFromKafka: String => ZIO[Kafka, Throwable, Chunk[(String, String)]] =
     (topic: String) => for {
@@ -77,7 +81,8 @@ object Utils {
     } yield messages
 
   /**
-   * Blocks until messages have been produced to Kafka
+   * Produces given messages to kafka.
+   * Note that this will blocks until broker acknowledgement.
    */
   val produceMessagesToKafka: Chunk[ProducerRecord[String, String]] => ZIO[Kafka, Throwable, Unit] =
     (messages: Chunk[ProducerRecord[String, String]]) => for {
