@@ -4,11 +4,9 @@ import com.fqaiser94.safe.Utils._
 import org.apache.kafka.clients.producer.ProducerRecord
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.duration.durationInt
 import zio.kafka.admin.AdminClient.NewTopic
 import zio.kafka.admin.{AdminClient, AdminClientSettings}
 import zio.test.Assertion.{equalTo, hasSameElements}
-import zio.test.TestAspect.timeout
 import zio.test._
 import zio.test.environment.{TestConsole, TestEnvironment}
 import zio.{Chunk, ZIO}
@@ -24,7 +22,7 @@ object UtilsTest extends DefaultRunnableSpec {
 
         offsetMap <- getLatestOffsets("items")
       } yield assert(offsetMap)(equalTo(Map(0 -> 2L)))
-    } @@ timeout(60.seconds),
+    } @@ kafkaTestTimeout,
     testM("getLatestOffsets should return map of offsets for multi-partition topic") {
       for {
         brokerList <- ZIO.access[Kafka](_.get.bootstrapServers)
@@ -36,7 +34,7 @@ object UtilsTest extends DefaultRunnableSpec {
 
         offsetMap <- getLatestOffsets("items")
       } yield assert(offsetMap)(equalTo(Map(0 -> 1L, 1 -> 2L)))
-    } @@ timeout(60.seconds),
+    } @@ kafkaTestTimeout,
     testM("consumeAllMessagesFromKafka should consume all messages from singe-partitioned topic") {
       for {
         _ <- produceMessagesToKafka(Chunk(
@@ -46,7 +44,7 @@ object UtilsTest extends DefaultRunnableSpec {
 
         messages <- consumeAllMessagesFromKafka("items")
       } yield assert(messages)(equalTo(Seq(("key1", "value1"), ("key2", "value2"), ("key3", "value3"))))
-    } @@ timeout(60.seconds),
+    } @@ kafkaTestTimeout,
     testM("consumeAllMessagesFromKafka should consume all message from multi-partitioned topic") {
       for {
         brokerList <- ZIO.access[Kafka](_.get.bootstrapServers)
@@ -58,7 +56,7 @@ object UtilsTest extends DefaultRunnableSpec {
 
         messages <- consumeAllMessagesFromKafka("items")
       } yield assert(messages)(hasSameElements(Seq(("key1", "value1"), ("key2", "value2"), ("key3", "value3"))))
-    } @@ timeout(60.seconds)
+    } @@ kafkaTestTimeout
   )
 
   override def spec: Spec[TestEnvironment, TestFailure[Throwable], TestSuccess] =

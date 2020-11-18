@@ -8,15 +8,21 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import zio.blocking.Blocking
 import zio.clock.Clock
+import zio.duration.durationInt
 import zio.kafka.consumer.Consumer.{AutoOffsetStrategy, OffsetRetrieval}
 import zio.kafka.consumer.{Consumer, ConsumerSettings, Subscription}
 import zio.kafka.producer.{Producer, ProducerSettings}
 import zio.kafka.serde.Serde
+import zio.test.TestAspect.timeout
+import zio.test.TestAspectAtLeastR
+import zio.test.environment.Live
 import zio.{Chunk, Ref, ZIO}
 
 import scala.jdk.CollectionConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 
 object Utils {
+
+  val kafkaTestTimeout: TestAspectAtLeastR[Live] = timeout(60.seconds)
 
   /**
    * Returns numMessages from the beginning of the given topic.
